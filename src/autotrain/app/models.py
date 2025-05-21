@@ -1,6 +1,7 @@
 import collections
+import logging
 
-from huggingface_hub import list_models
+from huggingface_hub import list_models, HfApi
 
 
 def get_sorted_models(hub_models):
@@ -334,86 +335,55 @@ def _fetch_vlm_models():
 
 
 def _fetch_asr_models():
-    """
-    Fetches and sorts ASR models from the Hugging Face model hub.
-
-    This function retrieves models for the task "automatic-speech-recognition"
-    from the Hugging Face model hub, sorts them by the number of downloads, and combines
-    them into a single list. Additionally, it fetches trending models based on the number
-    of likes in the past 7 days, sorts them, and places them at the beginning of the list
-    if they are not already included.
-
-    Returns:
-        list: A sorted list of model identifiers from the Hugging Face model hub.
-    """
-    hub_models = list(
-        list_models(
-            task="automatic-speech-recognition",
-            library="transformers",
+    """Fetch ASR models from Hugging Face Hub."""
+    models = []
+    try:
+        api = HfApi()
+        # Get models sorted by downloads
+        asr_models = api.list_models(
+            filter="automatic-speech-recognition",
             sort="downloads",
             direction=-1,
-            limit=100,
-            full=False,
+            limit=50
         )
-    )
-    hub_models = get_sorted_models(hub_models)
-
-    trending_models = list(
-        list_models(
-            task="automatic-speech-recognition",
-            library="transformers",
-            sort="likes7d",
+        models = [model.modelId for model in asr_models]
+        
+        # Get trending models
+        trending_models = api.list_models(
+            filter="automatic-speech-recognition",
+            sort="likes",
             direction=-1,
-            limit=30,
-            full=False,
+            limit=10
         )
-    )
-    if len(trending_models) > 0:
-        trending_models = get_sorted_models(trending_models)
-        hub_models = [m for m in hub_models if m not in trending_models]
-        hub_models = trending_models + hub_models
-
-    return hub_models
+        trending = [model.modelId for model in trending_models]
+        
+        # Add trending models at the beginning if not already included
+        for model in trending:
+            if model not in models:
+                models.insert(0, model)
+                
+    except Exception as e:
+        logging.error(f"Error fetching ASR models: {e}")
+        # Fallback to default models
+        models = [
+            "facebook/wav2vec2-base-960h",
+            "facebook/wav2vec2-large-960h",
+            "facebook/wav2vec2-large-xlsr-53",
+            "microsoft/wavlm-base"
+        ]
+    
+    return models
 
 
 def fetch_models():
-    _mc = collections.defaultdict(list)
-    _mc["text-classification"] = _fetch_text_classification_models()
-    _mc["llm"] = _fetch_llm_models()
-    _mc["image-classification"] = _fetch_image_classification_models()
-    _mc["image-regression"] = _fetch_image_classification_models()
-    _mc["seq2seq"] = _fetch_seq2seq_models()
-    _mc["token-classification"] = _fetch_token_classification_models()
-    _mc["text-regression"] = _fetch_text_classification_models()
-    _mc["image-object-detection"] = _fetch_image_object_detection_models()
-    _mc["sentence-transformers"] = _fetch_st_models()
-    _mc["vlm"] = _fetch_vlm_models()
-    _mc["extractive-qa"] = _fetch_text_classification_models()
-    _mc["automatic-speech-recognition"] = _fetch_asr_models()
-
-    # tabular-classification
-    _mc["tabular-classification"] = [
-        "xgboost",
-        "random_forest",
-        "ridge",
-        "logistic_regression",
-        "svm",
-        "extra_trees",
-        "adaboost",
-        "decision_tree",
-        "knn",
-    ]
-
-    # tabular-regression
-    _mc["tabular-regression"] = [
-        "xgboost",
-        "random_forest",
-        "ridge",
-        "svm",
-        "extra_trees",
-        "adaboost",
-        "decision_tree",
-        "knn",
-    ]
-
-    return _mc
+    """Fetch models for all tasks."""
+    MODEL_CHOICE = {}
+    MODEL_CHOICE["text-classification"] = _fetch_text_classification_models()
+    MODEL_CHOICE["token-classification"] = _fetch_token_classification_models()
+    MODEL_CHOICE["text-regression"] = _fetch_text_regression_models()
+    MODEL_CHOICE["seq2seq"] = _fetch_seq2seq_models()
+    MODEL_CHOICE["image-classification"] = _fetch_image_classification_models()
+    MODEL_CHOICE["image-regression"] = _fetch_image_regression_models()
+    MODEL_CHOICE["image-object-detection"] = _fetch_object_detection_models()
+    MODEL_CHOICE["automatic-speech-recognition"] = _fetch_asr_models()
+    return MODEL_CHOICE

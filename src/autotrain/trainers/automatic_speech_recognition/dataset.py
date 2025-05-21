@@ -48,4 +48,4 @@ class AutomaticSpeechRecognitionDataset:
         return {
             "input_values": inputs.input_values.squeeze(),
             "labels": torch.tensor(labels),
-        } 
+        }

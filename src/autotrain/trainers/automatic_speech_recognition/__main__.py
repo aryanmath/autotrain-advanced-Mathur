@@ -208,4 +208,4 @@ if __name__ == "__main__":
     args = parse_args()
     training_config = json.load(open(args.training_config))
     config = AutomaticSpeechRecognitionParams(**training_config)
-    train(config) 
+    train(config)

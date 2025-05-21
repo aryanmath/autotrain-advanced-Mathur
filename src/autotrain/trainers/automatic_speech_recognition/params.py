@@ -18,4 +18,4 @@ class AutomaticSpeechRecognitionParams(TrainingParams):
     eval_strategy: str = "epoch"
     save_total_limit: int = 1
     auto_find_batch_size: bool = False
-    logging_steps: int = -1 
+    logging_steps: int = -1
